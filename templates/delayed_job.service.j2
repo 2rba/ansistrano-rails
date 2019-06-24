@@ -1,0 +1,33 @@
+# Keep delayed job workers running using systemd on ubuntu
+# Usage
+# Start "sudo systemctl start delayed_job@{0..3}" to start 4 worker instances
+# Enable "sudo systemctl enable delayed_job@{0..3}" to enable 4 worker instances
+# Restart "sudo systemctl restart delayed_job@{0..3}" to restart 4 worker instances
+# Disable "sudo systemctl disable delayed_job@{0..3}" to disable 4 worker instances
+# Stop "sudo systemctl stop delayed_job@{0..3}" to stop 4 worker instances
+
+[Unit]
+Description=Delayed Job Worker
+After=syslog.target network.target
+AssertPathExists=/apps/{{project_name}}/current
+
+[Service]
+Type=simple
+WorkingDirectory=/apps/{{project_name}}/current
+Environment=RAILS_ENV={{rails_env}}
+
+ExecStart=/usr/local/bin/bundle exec script/delayed_job run
+KillSignal=SIGINT
+User={{deploy_user}}
+Group={{deploy_user}}
+
+# Restart after 1 minute delay
+Restart=on-failure
+RestartSec=60
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=dj_worker
+
+[Install]
+WantedBy=multi-user.target

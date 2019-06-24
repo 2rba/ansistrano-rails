@@ -1,0 +1,15 @@
+---
+- name: restart puma
+  become: true
+  systemd:
+    name: puma.service
+    state: restarted
+- name: restart delayed job
+  become: true
+  systemd:
+    name: delayed_job
+    state: restarted
+- name: Update crontab
+  shell: "bundle exec whenever --update-crontab -i {{project_name}}"
+  args:
+    chdir: "{{ ansistrano_release_path.stdout }}"

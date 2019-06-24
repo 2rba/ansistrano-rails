@@ -1,0 +1,13 @@
+/apps/{{project_name}}/shared/log/*.log {
+  daily
+  missingok
+  rotate 7
+  compress
+  delaycompress
+  notifempty
+  postrotate
+    /usr/sbin/service nginx rotate
+    [ -e /tmp/puma.pid ] && kill -HUP `cat /tmp/puma.pid` && kill -USR1 `cat /tmp/puma.pid`
+    /bin/systemctl restart delayed_job.service
+  endscript
+}

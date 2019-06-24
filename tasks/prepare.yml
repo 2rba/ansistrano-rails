@@ -1,0 +1,13 @@
+---
+- name: Run bundle install
+  shell: "bundle install --deployment --without development test --binstubs=/home/{{deploy_user}}/bin"
+  args:
+    chdir: "{{ ansistrano_release_path.stdout }}"
+- name: Copy env file
+  copy:
+    src: ~/iCloud/secrets/lerd/lerd.production.env
+    dest: "{{ ansistrano_release_path.stdout }}/.env.production.local"
+- name: Precompile assets
+  shell: "bundle exec rake assets:precompile"
+  args:
+    chdir: "{{ ansistrano_release_path.stdout }}"

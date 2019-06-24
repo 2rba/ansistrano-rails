@@ -1,0 +1,50 @@
+---
+- hosts: database
+  pre_tasks:
+    - raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+  remote_user: root
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Update all packages to the latest version
+      apt:
+        upgrade: dist
+    - name: Install packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - mysql-server
+    - name: Create mysql cnf file
+      template:
+        src: templates/mysql.custom.j2
+        dest: /etc/mysql/custom.cnf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Include mysql custom config
+      lineinfile:
+        dest: /etc/mysql/mysql.cnf
+        state: present
+        regexp: '^\!include \/etc\/mysql\/custom.cnf'
+        line: '!include /etc/mysql/custom.cnf'
+    - name: Include env file
+
+
+    - name: Create user
+      user:
+        name: devel
+        groups: sudo
+        shell: /bin/bash
+    - name: Allow 'sudo' group to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%sudo'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+    - name: Put ssh key
+      authorized_key:
+        user: devel
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

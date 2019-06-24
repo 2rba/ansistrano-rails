@@ -1,0 +1,94 @@
+---
+- hosts: oldweb
+  pre_tasks:
+    - raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+    - name: Update all packages to the latest version
+      apt:
+        upgrade: dist
+  remote_user: root
+  become: yes
+  gather_facts: false
+  roles:
+    - { role: rvm.ruby,
+        become: yes,
+        rvm1_rubies: ['ruby-2.0.0'],
+
+        rvm1_install_flags: '--ignore-dotfiles',
+        rvm1_install_path: /usr/local/rvm,
+        rvm1_user: root,
+        rvm1_bundler_install: False
+    }
+  tasks:
+    - name : Remove /etc/profile.d/rvm.sh
+      file:
+        state: absent
+        path: /etc/profile.d/rvm.sh
+    - name: Install bundler
+      command: gem install bundler -v 1.17.3
+    - name: Link bundler
+      file:
+        src: /usr/local/rvm/wrappers/default/bundle
+        dest: /usr/local/bin/bundle
+        state: link
+    - name: Install packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - libmysqlclient-dev
+          - nginx
+    - name: Create user
+      user:
+        name: "{{deploy_user}}"
+        groups: sudo
+        shell: /bin/bash
+    - name: Allow 'sudo' group to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%sudo'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+    - name: Put ssh key
+      authorized_key:
+        user: "{{deploy_user}}"
+        state: present
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    - name: Create app directory
+      file:
+        path: "/apps/{{project_name}}"
+        state: directory
+        owner: "{{deploy_user}}"
+    - name: Set RAILS_ENV
+      lineinfile:
+        path: /etc/environment
+        regexp: '^RAILS_ENV='
+        line: "RAILS_ENV={{rails_env}}"
+    - name: Create Puma service
+      template:
+        src: templates/puma.service.j2
+        dest: /etc/systemd/system/puma.service
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Create Nginx config
+      template:
+        src: templates/nginx.j2
+        dest: "/etc/nginx/sites-enabled/{{project_name}}"
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Create Delayed Job service
+      template:
+        src: templates/delayed_job.service.j2
+        dest: /etc/systemd/system/delayed_job.service
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Create logrotate config
+      template:
+        src: templates/logrotate.j2
+        dest: /etc/logrotate.d/rails
+        owner: root
+        group: root
+        mode: '0644'

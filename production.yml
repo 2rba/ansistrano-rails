@@ -1,0 +1,13 @@
+all:
+  vars:
+    rails_env: production
+  children:
+    oldweb:
+      hosts:
+        lerd:
+          ansible_host: <server ip>
+          nginx_server_name: lerd.gdn
+    database:
+      hosts:
+        mysql:
+          ansible_host: <server ip>
