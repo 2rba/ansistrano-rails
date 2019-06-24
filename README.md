@@ -34,6 +34,16 @@ cd <your project>/config/deploy/
 ansible-galaxy install -r galaxy.yml
 ```
 
+- To allow ssh key forwarding (to access private git repo from server) update `~/.ansible.cfg` as:  
+```.env
+[defaults]
+# human-readable stdout/stderr results display
+stdout_callback = yaml
+
+[ssh_connection]
+ssh_args = -o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s
+```
+
 ## Configure
 
 This repo root folder has 3 playbooks and 1 inventory file (production.yml)
